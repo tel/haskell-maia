@@ -3,6 +3,8 @@
 
 *Highly-typeful data fetching in Haskell, a la GraphQL*
 
+[![Build Status](https://travis-ci.org/MaiaOrg/haskell-maia.svg?branch=master)](https://travis-ci.org/MaiaOrg/haskell-maia)
+
 ## Welcome
 
 Maia is a type-level library for writing GraphQL-like APIs.
