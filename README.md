@@ -42,19 +42,6 @@ debate.
 
 - Patches must pass continuous integration on the Travis CI instance associated
   with this Github repository.
-- Code must be formatted according to the ScalaFmt configuration provided.
-- Patches must pass test suite which includes WartRemover and ScalaStyle lints,
-  e.g.
-  - Tabs are disallowed
-  - Whitespace at end of lines is disallowed
-  - MPLv2.0 license must be the header of every file
-  - Public methods must be given an explicit type
-  - Type-unsafe `==` is disallowed
-  - `return`, `null`, `.clone()`, and `.finalize()` are disallowed
-  - Structural types are disallowed
-  - &c.
-    - For more, see [Wartremover](https://github.com/wartremover/wartremover)
-      and `scalastyle-config.xml`
 
 ### Maintainers
 
