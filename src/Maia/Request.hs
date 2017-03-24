@@ -16,17 +16,22 @@
 
 module Maia.Request where
 
-import Control.Applicative
+import Data.Map (Map)
+import Data.Set (Set)
 import Data.Singletons
-import Data.Singletons.Prelude hiding ((:-))
+import Data.Singletons.Prelude hiding ((:-), Map, All)
 import Data.Vinyl
-import GHC.Exts (Constraint)
 import Maia.Internal.Lens
 import Maia.Language
+import Maia.Language.Config
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
-type family ReqOf (f :: Field) where
-  ReqOf (Atomic a) = Bool
-  ReqOf (Nested t) = Maybe (Request t)
+type family ReqOf f where
+  ReqOf '(ConfigIs card NoArg err, Atomic a) = Bool
+  ReqOf '(ConfigIs card (Arg arg) err, Atomic a) = Set arg
+  ReqOf '(ConfigIs card NoArg err, Nested t) = Maybe (Request t)
+  ReqOf '(ConfigIs card (Arg arg) err, Nested t) = Map arg (Request t)
 
 newtype Req f =
   Req (ReqOf (NamedValue f))
@@ -38,39 +43,56 @@ newtype Request t =
   deriving (Show)
 
 instance SingI (Fields t) => Monoid (Request t) where
+
   mempty = Request (go sing) where
-    go :: Sing rs -> Rec Req rs 
+
+    go :: Sing rs -> Rec Req rs
     go SNil = RNil
-    go (SCons (SNamed _ z) rs') =
-      case z of
-        SAtomic _ -> Req False :& go rs'
-        SNested _ _ -> Req Nothing :& go rs'
-  mappend = goReq sing where
+    go (SCons (SNamed _ z) rs') = defValue z :& go rs'
 
-    goReq :: forall t .
-      Sing (Fields t) -> Request t -> Request t -> Request t
-    goReq s (Request r1) (Request r2) = Request (go s r1 r2)
 
-    go :: forall rs .
-      Sing rs ->
-      Rec Req rs -> Rec Req rs ->
-      Rec Req rs
-    go rs r1 r2 =
-      case rs of
-        SNil -> RNil
-        SCons (SNamed _ (SAtomic a)) rs' -> case (r1, r2) of
-          (Req rh1 :& rt1, Req rh2 :& rt2) ->
-            Req (rh1 || rh2) :& go rs' rt1 rt2
-        SCons (SNamed (_ :: Sing n) (SNested sfields (_ :: Sing t'))) rs' ->
-          case (r1, r2) of
-            (Req rh1 :& rt1, Req rh2 :& rt2) ->
-              let
-                req' :: Maybe (Request t')
-                req' = case (rh1, rh2) of
-                  (Just a, Just b) -> Just (goReq sfields a b)
-                  (Just a, _) -> Just a
-                  (_, b) -> b
-              in Req req' :& go rs' rt1 rt2
+  mappend = combReq sing where
+
+combReq :: forall t .
+  Sing (Fields t) -> Request t -> Request t -> Request t
+combReq sft (Request rec1) (Request rec2) =
+  Request (go sft rec1 rec2) where
+
+  go :: forall rs .
+    Sing rs ->
+    Rec Req rs -> Rec Req rs ->
+    Rec Req rs
+  go rs r1 r2 =
+    case rs of
+      SNil -> RNil
+      SCons (SNamed _ s) rs' -> case (r1, r2) of
+        (rh1 :& rt1, rh2 :& rt2) ->
+          combValue s rh1 rh2 :& go rs' rt1 rt2
+
+defValue :: Sing s -> Req (n :- s)
+defValue (STuple2 (SConfig _ arg _) v) =
+  case (v, arg) of
+    (SAtomic, SNoArg) -> Req False
+    (SAtomic, SArg) -> Req Set.empty
+    (SNested _, SNoArg) -> Req Nothing
+    (SNested _, SArg) -> Req Map.empty
+
+combValue :: Sing s -> Req (n :- s) -> Req (n :- s) -> Req (n :- s)
+combValue s (Req reqa) (Req reqb) = Req (go s reqa reqb) where
+  go :: forall s . Sing s -> ReqOf s -> ReqOf s -> ReqOf s
+  go (STuple2 (SConfig _ args _) v) a b =
+    case (v, args) of
+      (SAtomic, SNoArg) ->
+        a || b
+      (SAtomic, SArg) ->
+        Set.union a b
+      (SNested fields, SNoArg) -> case (a, b) of
+        (Just aa, Just bb) -> Just (combReq fields aa bb)
+        (Just aa, _) -> Just aa
+        (_, Just bb) -> Just bb
+        (_, _) -> Nothing
+      (SNested fields, SArg) ->
+        Map.unionWith (combReq fields) a b
 
 lRequest' :: Lens' (Request t) (Rec Req (Fields t))
 lRequest' inj (Request rc) = Request <$> inj rc

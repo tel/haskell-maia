@@ -30,7 +30,7 @@ lset :: Lens s t a b -> b -> s -> t
 lset l = lover l . const
 
 rlHead :: Lens (Rec f (r ': rs)) (Rec f (s ': rs)) (f r) (f s)
-rlHead inj (head :& tail) = (\head' -> head' :& tail) <$> inj head
+rlHead inj (hd :& tl) = (\hd' -> hd' :& tl) <$> inj hd
 
 rlTail :: Lens (Rec f (r ': rs)) (Rec f (r ': ss)) (Rec f rs) (Rec f ss)
-rlTail inj (head :& tail) = (\tail' -> head :& tail') <$> inj tail
+rlTail inj (hd :& tl) = (\tl' -> hd :& tl') <$> inj tl

@@ -9,6 +9,7 @@ module Maia.Lookup.Error where
 data LookupError e
   = Branch (LookupError e) (LookupError e)
   | Nest String (LookupError e)
+  | LocalError e
   | BadResponse BadResponseError
   deriving (Eq, Ord, Show, Functor)
 

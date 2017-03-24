@@ -18,6 +18,8 @@ library
   exposed-modules: 
     Maia.Internal.Lens
     Maia.Language
+    Maia.Language.Cardinality
+    Maia.Language.Config
     Maia.Lookup
     Maia.Lookup.Builder
     Maia.Lookup.Error
@@ -26,6 +28,8 @@ library
   build-depends:       base >= 4.7 && < 5
                      , vinyl
                      , singletons
+                     , containers
+  ghc-options:         -Wall -Werror
   default-language:    Haskell2010
 
 test-suite maia-test
@@ -33,7 +37,7 @@ test-suite maia-test
   hs-source-dirs:      test
   main-is:             Spec.hs
   other-modules:
-    Example
+    Example.Api
   build-depends:       base
                      , maia
                      , vinyl

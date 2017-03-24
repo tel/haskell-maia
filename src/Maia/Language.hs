@@ -15,9 +15,9 @@
 module Maia.Language where
 
 import Data.Singletons
-import Data.Singletons.TypeRepStar
 import Data.Kind
 import GHC.TypeLits
+import Maia.Language.Config
 
 data Field where
   Atomic :: Type -> Field
@@ -26,12 +26,18 @@ data Field where
 type Atomic = 'Atomic
 type Nested = 'Nested
 
-data instance Sing (s :: Field) where
-  SAtomic :: s ~ Atomic t => Sing t -> Sing (Atomic t)
-  SNested :: s ~ Nested t => Sing (Fields t) -> Sing t -> Sing (Nested t)
+type Atomic' a = '(DefaultConfig, Atomic a)
+type Nested' t = '(DefaultConfig, Nested t)
 
-instance SingI t => SingI (Atomic t) where sing = SAtomic sing
-instance (SingI t, SingI (Fields t)) => SingI (Nested t) where sing = SNested sing sing
+data instance Sing (s :: Field) where
+  SAtomic :: s ~ Atomic t => Sing (Atomic t)
+  SNested :: s ~ Nested t => Sing (Fields t) -> Sing (Nested t)
+
+instance SingI (Atomic t) where
+  sing = SAtomic
+
+instance SingI (Fields t) => SingI (Nested t) where
+  sing = SNested sing
 
 data Named k where
   (:-) :: n -> k -> Named k
@@ -47,4 +53,4 @@ instance (KnownSymbol n, SingI n, SingI v) => SingI (n :- v) where
 type family NamedValue (n :: Named v) :: v where
   NamedValue (n :- v) = v
 
-type family Fields t :: [Named Field]
+type family Fields t :: [Named (Config, Field)]

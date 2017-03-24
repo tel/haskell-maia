@@ -9,18 +9,31 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Maia.Response where
 
-import Data.Singletons
-import Data.Singletons.Prelude hiding ((:-))
+import Data.Map (Map)
 import Data.Vinyl
 import Maia.Internal.Lens
 import Maia.Language
+import Maia.Language.Config
+import Maia.Language.Cardinality
 
-type family RespOf (f :: Field) where
-  RespOf (Atomic a) = Maybe a
-  RespOf (Nested t) = Maybe (Response t)
+type family RespOf f where
+  RespOf '(ConfigIs card args e, Atomic a) =
+    ArgsFor args (ErrorsFor e (CollectionOf card a))
+
+  RespOf '(ConfigIs card args e, Nested t) =
+    ArgsFor args (ErrorsFor e (CollectionOf card (Response t)))
+
+type family ArgsFor args a where
+  ArgsFor NoArg a = Maybe a
+  ArgsFor (Arg arg) a = Map arg a
+
+type family ErrorsFor err a where
+  ErrorsFor NoErr a = a
+  ErrorsFor (Err e) a = Either e a
 
 newtype Resp f =
   Resp (RespOf (NamedValue f))
