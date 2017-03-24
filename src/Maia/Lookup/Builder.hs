@@ -35,16 +35,21 @@ data End = End
 data a :*: b = a :*: b
 infixr 2 :*:
 
-newtype Nesting e card t t' =
-  Nesting { runNesting :: forall r . Lookup t' e r -> Lookup t e (CollectionOf card r) }
+-- | A value of @Zoom _ _ t t'@ transforms a @Lookup@ on the type @t'@ to
+-- one on @t@. Use @runZoom@ to access this "@Lookup@-transformer".
+newtype Zoom e card t t' =
+  Zoom { runZoom :: forall r . Lookup t' e r -> Lookup t e (CollectionOf card r) }
 
-newtype Query t s = Query (QueryOf t s)
+-- | A value of type @Query t s@ knows how to build @Lookup@s from the fields of
+-- @t@ to a particular field @s@. The type of the value inside of a @Query@ depends
+-- upon @t@ and @s@. It's easiest to let Haskell infer these types.
+newtype Query t s = Query { runQuery :: QueryOf t s }
 
 type family QueryOf t s = l where
   QueryOf t '(ConfigIs card args err, Atomic a) =
     ArgsFor args (Lookup t (ErrorFor err) (CollectionOf card a))
   QueryOf t '(ConfigIs card args err, Nested t') =
-    ArgsFor args (Nesting (ErrorFor err) card t t')
+    ArgsFor args (Zoom (ErrorFor err) card t t')
 
 type family ArgsFor args r where
   ArgsFor NoArg r = r
@@ -60,88 +65,71 @@ type family Lookups t rs = r where
 
 type FieldLens t n s = forall f . Lens' (Rec f (Fields t)) (f (n :- s))
 
+-- | Generate a heterogenous list of "query-builder"s for a given type with
+-- a specified Fields-set. See examples for syntax.
 lookups :: forall t proxy . SingI (Fields t) => proxy t -> Lookups t (Fields t)
 lookups _ = go (sing :: Sing (Fields t)) id where
   go :: forall rs . Sing rs -> RecSel (Fields t) rs -> Lookups t rs
   go SNil _ = End
-  go (SCons (SNamed (n :: Sing n) (s :: Sing s)) rs') l =
-    lookupOne (symbolVal n) mempty (l . rlHead) s :*: go rs' (l . rlTail)
+  go (SCons (SNamed n s) rs') l =
+    lookupOne (symbolVal n) mempty (l . rlHead) s
+    :*:
+    go rs' (l . rlTail)
 
-lookupOne ::
-  String -> Request t -> FieldLens t n s -> Sing s -> Query t s
-lookupOne name req0 lens (STuple2 c SAtomic) =
-  lookupAtomic name req0 lens c
-lookupOne name req0 lens (STuple2 c (SNested fields)) =
-  lookupNested name req0 lens c fields
+-- | Creates a query for a single field within a Fields type.
+lookupOne :: forall t n s . String -> Request t -> FieldLens t n s -> Sing s -> Query t s
+lookupOne name req0 lens (STuple2 (SConfig card arg (e :: Sing err)) ft) =
+  case (ft, arg) of
 
-handleError ::
-  Sing e -> Response.ErrorsFor e a ->
-  (a -> Result (ErrorFor e) r) -> Result (ErrorFor e) r
-handleError SNoErr a k = k a
-handleError SErr (Left e) _ = Result (Left (Le.LocalError e))
-handleError SErr (Right a) k = k a
+    (SAtomic, SNoArg) ->
+      Query (buildLookup (Req True) id (Result . Right))
 
-lookupAtomic ::
-  forall t c n a .
-  String -> Request t -> FieldLens t n '(c, Atomic a) ->
-  Sing c -> Query t '(c, Atomic a)
-lookupAtomic name req0 lens c =
-  case c of
-    SConfig (_ :: Sing card) SNoArg (e :: Sing e) ->
-      let
-        req :: Request t
-        req = lset (lRequest' . lens) (Req True) req0
-        resph :: Response t -> Result (ErrorFor e) (CollectionOf card a)
-        resph resp = case lget (lResponse' . lens) resp of
-          Resp Nothing ->
-            Result (Left (Le.BadResponse (Le.MissingKey name)))
-          Resp (Just res) ->
-            handleError e res (Result . Right)
-      in Query (Lookup req resph)
-
-    SConfig (_ :: Sing card) SArg (e :: Sing e) ->
+    (SAtomic, SArg) ->
       Query $ \i ->
-        let
-          req :: Request t
-          req = lset (lRequest' . lens) (Req (Set.singleton i)) req0
-          resph :: Response t -> Result (ErrorFor e) (CollectionOf card a)
-          resph resp = case lget (lResponse' . lens) resp of
-            Resp mp -> case Map.lookup i mp of
+        buildLookup (Req (Set.singleton i)) (Map.lookup i) (Result . Right)
+
+    (SNested _, SNoArg) ->
+      Query $ Zoom $ \subLk ->
+        buildLookup
+          (Req (Just (request subLk)))
+          id
+          (traverseColl card (responseHandler subLk))
+
+    (SNested _, SArg) ->
+      Query $ \i ->
+        Zoom $ \subLk ->
+          buildLookup 
+            (Req (Map.singleton i (request subLk)))
+            (Map.lookup i)
+            (traverseColl card (responseHandler subLk)) 
+
+  where
+
+    -- | Most of the work in building a Lookup is mechanical. We (1) modify the
+    -- default request with an appropriate "atomic" new request component placed
+    -- wherever our record lens, `lens`, points, (2) build the response handler
+    -- by using that same lens to reach into a response and (after interpreting the
+    -- response accordingly) handle various error conditions.
+
+    buildLookup ::
+      Req (n :- s)
+      -> (RespOf s -> Maybe (ErrorsFor err a))
+      -> (a -> Result (ErrorFor err) r)
+      -> Lookup t (ErrorFor err) r
+    buildLookup reqHole respPre resultHandler = Lookup req resph where
+      req =
+        lset (lRequest' . lens) reqHole req0
+      resph resp =
+        case lget (lResponse' . lens) resp of
+          Resp coreResp ->
+            nestResult name $ case respPre coreResp of
               Nothing ->
                 Result (Left (Le.BadResponse (Le.MissingKey name)))
-              Just res ->
-                handleError e res (Result . Right)
-        in Lookup req resph
-
-lookupNested ::
-  forall t n c t' .
-  String -> Request t -> FieldLens t n '(c, Nested t') ->
-  Sing c -> Sing (Fields t') -> Query t '(c, Nested t')
-lookupNested name req0 lens c _ = case c of
-  SConfig (card :: Sing card) SNoArg (e :: Sing e) ->
-    Query $ Nesting $ \(subLk :: Lookup t' (ErrorFor e) r) ->
-      let
-        req :: Request t
-        req = lset (lRequest' . lens) (Req (Just (request subLk))) req0
-        resph :: Response t -> Result (ErrorFor e) (CollectionOf card r)
-        resph resp = case lget (lResponse' . lens) resp of
-          Resp Nothing ->
-            Result (Left (Le.BadResponse (Le.MissingKey name)))
-          Resp (Just res) ->
-            handleError e res (traverseColl card (responseHandler subLk))
-      in Lookup req resph
-
-  SConfig (card :: Sing card) SArg (e :: Sing e) ->
-    Query $ \i ->
-      Nesting $ \(subLk :: Lookup t' (ErrorFor e) r) ->
-        let
-          req :: Request t
-          req = lset (lRequest' . lens) (Req (Map.singleton i (request subLk))) req0
-          resph :: Response t -> Result (ErrorFor e) (CollectionOf card r)
-          resph resp = case lget (lResponse' . lens) resp of
-            Resp mp -> case Map.lookup i mp of 
-              Nothing ->
-                Result (Left (Le.BadResponse (Le.MissingKey name)))
-              Just res ->
-                handleError e res (traverseColl card (responseHandler subLk))
-        in Lookup req resph
+              Just res -> case e of
+                SNoErr ->
+                  resultHandler res
+                SErr -> case res of
+                  Left le ->
+                    Result (Left (Le.LocalError le))
+                  Right a ->
+                    resultHandler a

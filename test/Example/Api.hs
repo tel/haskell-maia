@@ -35,7 +35,7 @@ type instance Fields City =
   , "mayor" :- '(ConfigIs Opt NoArg NoErr, Nested Person)
   ]
 
-Query name :*: Query (Nesting coordinates) :*: Query (Nesting mayor) :*: End =
+Query name :*: Query (Zoom coordinates) :*: Query (Zoom mayor) :*: End =
   lookups (Proxy :: Proxy City)
 
 data Person
@@ -46,7 +46,7 @@ type instance Fields Person =
   , "hometown" :- '(ConfigIs Opt NoArg NoErr, Nested City)
   ]
 
-Query firstName :*: Query lastName :*: Query (Nesting hometown) :*: End =
+Query firstName :*: Query lastName :*: Query (Zoom hometown) :*: End =
   lookups (Proxy :: Proxy Person)
 
 data Api
@@ -56,5 +56,5 @@ type instance Fields Api =
   , "getCurrentUser" :- '(ConfigIs Opt NoArg NoErr, Nested Person)
   ]
 
-Query getUser :*: Query (Nesting getCurrentUser) :*: End =
+Query getUser :*: Query (Zoom getCurrentUser) :*: End =
   lookups (Proxy :: Proxy Api)
