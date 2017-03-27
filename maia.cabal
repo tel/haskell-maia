@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules: 
+    Maia.Handler
     Maia.Internal.Lens
     Maia.Language
     Maia.Language.Cardinality
