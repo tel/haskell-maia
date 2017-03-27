@@ -47,15 +47,15 @@ type Err = 'Err
 
 
 
-data Config where
-  ConfigIs :: Cardinality -> ArgConfig -> ErrConfig -> Config
+data FieldConfig where
+  Config :: Cardinality -> ArgConfig -> ErrConfig -> FieldConfig
 
-type ConfigIs = 'ConfigIs
+type Config = 'Config
 
-type DefaultConfig = ConfigIs One NoArg NoErr
+type DefaultConfig = Config One NoArg NoErr
 
-data instance Sing (c :: Config) where
-  SConfig :: Sing card -> Sing arg -> Sing err -> Sing (ConfigIs card arg err)
+data instance Sing (c :: FieldConfig) where
+  SConfig :: Sing card -> Sing arg -> Sing err -> Sing (Config card arg err)
 
-instance (SingI args, SingI card, SingI err) => SingI (ConfigIs args card err) where
+instance (SingI args, SingI card, SingI err) => SingI (Config args card err) where
   sing = SConfig sing sing sing

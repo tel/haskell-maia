@@ -20,6 +20,7 @@ library
     Maia.Language
     Maia.Language.Cardinality
     Maia.Language.Config
+    Maia.Language.Named
     Maia.Lookup
     Maia.Lookup.Builder
     Maia.Lookup.Error

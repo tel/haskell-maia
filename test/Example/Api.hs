@@ -15,46 +15,51 @@ import Data.Proxy
 import Maia.Language
 import Maia.Language.Config
 import Maia.Language.Cardinality
+import Maia.Language.Named ((:-))
 import Maia.Lookup.Builder
 
 data Location
 
-type instance Fields Location =
-  [ "latitude" :- Atomic' Double
-  , "longitude" :- Atomic' Double
-  ]
+instance HasApi Location where
+  type Fields Location =
+    [ "latitude" :- Atomic' Double
+    , "longitude" :- Atomic' Double
+    ]
 
 Query latitude :*: Query longitude :*: End =
   lookups (Proxy :: Proxy Location)
 
 data City
 
-type instance Fields City =
-  [ "name" :- Atomic' String
-  , "coordinates" :- Nested' Location
-  , "mayor" :- '(ConfigIs Opt NoArg NoErr, Nested Person)
-  ]
+instance HasApi City where
+  type Fields City =
+    [ "name" :- Atomic' String
+    , "coordinates" :- Nested' Location
+    , "mayor" :- Field (Config Opt NoArg NoErr) (Nested Person)
+    ]
 
 Query name :*: Query (Zoom coordinates) :*: Query (Zoom mayor) :*: End =
   lookups (Proxy :: Proxy City)
 
 data Person
 
-type instance Fields Person =
-  [ "firstName" :- Atomic' String
-  , "lastName" :- Atomic' String
-  , "hometown" :- '(ConfigIs Opt NoArg NoErr, Nested City)
-  ]
+instance HasApi Person where
+  type Fields Person =
+    [ "firstName" :- Atomic' String
+    , "lastName" :- Atomic' String
+    , "hometown" :- Field (Config Opt NoArg NoErr) (Nested City)
+    ]
 
 Query firstName :*: Query lastName :*: Query (Zoom hometown) :*: End =
   lookups (Proxy :: Proxy Person)
 
 data Api
 
-type instance Fields Api =
-  [ "getUser" :- '(ConfigIs Opt (Arg Int) NoErr, Nested Person)
-  , "getCurrentUser" :- '(ConfigIs Opt NoArg NoErr, Nested Person)
-  ]
+instance HasApi Api where
+  type Fields Api =
+    [ "getUser" :- Field (Config Opt (Arg Int) NoErr) (Nested Person)
+    , "getCurrentUser" :- Field (Config Opt NoArg NoErr) (Nested Person)
+    ]
 
 Query getUser :*: Query (Zoom getCurrentUser) :*: End =
   lookups (Proxy :: Proxy Api)

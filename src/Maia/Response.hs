@@ -19,12 +19,13 @@ import Maia.Internal.Lens
 import Maia.Language
 import Maia.Language.Config
 import Maia.Language.Cardinality
+import Maia.Language.Named
 
 type family RespOf f where
-  RespOf '(ConfigIs card args e, Atomic a) =
+  RespOf (Field (Config card args e) (Atomic a)) =
     ArgsFor args (ErrorsFor e (CollectionOf card a))
 
-  RespOf '(ConfigIs card args e, Nested t) =
+  RespOf (Field (Config card args e) (Nested t)) =
     ArgsFor args (ErrorsFor e (CollectionOf card (Response t)))
 
 type family ArgsFor args a where

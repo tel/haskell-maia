@@ -20,18 +20,19 @@ import Data.Map (Map)
 import Data.Set (Set)
 import Data.Singletons
 import Data.Singletons.Prelude hiding ((:-), Map, All)
-import Data.Vinyl
+import Data.Vinyl hiding (SField)
 import Maia.Internal.Lens
 import Maia.Language
 import Maia.Language.Config
+import Maia.Language.Named
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
 type family ReqOf f where
-  ReqOf '(ConfigIs card NoArg err, Atomic a) = Bool
-  ReqOf '(ConfigIs card (Arg arg) err, Atomic a) = Set arg
-  ReqOf '(ConfigIs card NoArg err, Nested t) = Maybe (Request t)
-  ReqOf '(ConfigIs card (Arg arg) err, Nested t) = Map arg (Request t)
+  ReqOf (Field (Config card NoArg err) (Atomic a)) = Bool
+  ReqOf (Field (Config card (Arg arg) err) (Atomic a)) = Set arg
+  ReqOf (Field (Config card NoArg err) (Nested t)) = Maybe (Request t)
+  ReqOf (Field (Config card (Arg arg) err) (Nested t)) = Map arg (Request t)
 
 newtype Req f =
   Req (ReqOf (NamedValue f))
@@ -70,7 +71,7 @@ combReq sft (Request rec1) (Request rec2) =
           combValue s rh1 rh2 :& go rs' rt1 rt2
 
 defValue :: Sing s -> Req (n :- s)
-defValue (STuple2 (SConfig _ arg _) v) =
+defValue (SField (SConfig _ arg _) v) =
   case (v, arg) of
     (SAtomic, SNoArg) -> Req False
     (SAtomic, SArg) -> Req Set.empty
@@ -80,7 +81,7 @@ defValue (STuple2 (SConfig _ arg _) v) =
 combValue :: Sing s -> Req (n :- s) -> Req (n :- s) -> Req (n :- s)
 combValue s (Req reqa) (Req reqb) = Req (go s reqa reqb) where
   go :: forall s . Sing s -> ReqOf s -> ReqOf s -> ReqOf s
-  go (STuple2 (SConfig _ args _) v) a b =
+  go (SField (SConfig _ args _) v) a b =
     case (v, args) of
       (SAtomic, SNoArg) ->
         a || b

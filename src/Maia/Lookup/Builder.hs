@@ -17,13 +17,14 @@ module Maia.Lookup.Builder where
 
 import Data.Singletons
 import Data.Singletons.Prelude hiding (Lookup, (:-))
-import Data.Vinyl
+import Data.Vinyl hiding (SField)
 import Data.Void
 import GHC.TypeLits
 import Maia.Internal.Lens
 import Maia.Language
 import Maia.Language.Cardinality
 import Maia.Language.Config
+import Maia.Language.Named
 import Maia.Lookup
 import Maia.Request
 import Maia.Response as Response hiding (ArgsFor)
@@ -46,9 +47,9 @@ newtype Zoom e card t t' =
 newtype Query t s = Query { runQuery :: QueryOf t s }
 
 type family QueryOf t s = l where
-  QueryOf t '(ConfigIs card args err, Atomic a) =
+  QueryOf t (Field (Config card args err) (Atomic a)) =
     ArgsFor args (Lookup t (ErrorFor err) (CollectionOf card a))
-  QueryOf t '(ConfigIs card args err, Nested t') =
+  QueryOf t (Field (Config card args err) (Nested t')) =
     ArgsFor args (Zoom (ErrorFor err) card t t')
 
 type family ArgsFor args r where
@@ -78,7 +79,7 @@ lookups _ = go (sing :: Sing (Fields t)) id where
 
 -- | Creates a query for a single field within a Fields type.
 lookupOne :: forall t n s . String -> Request t -> FieldLens t n s -> Sing s -> Query t s
-lookupOne name req0 lens (STuple2 (SConfig card arg (e :: Sing err)) ft) =
+lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
   case (ft, arg) of
 
     (SAtomic, SNoArg) ->
