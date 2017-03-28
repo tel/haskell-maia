@@ -20,10 +20,10 @@
 
 module Maia.Language where
 
-import Data.Singletons
 import Data.Kind
+import Data.Singletons
 import Maia.Language.Config
-import Maia.Language.Named
+import Maia.Record
 
 --------------------------------------------------------------------------------
 

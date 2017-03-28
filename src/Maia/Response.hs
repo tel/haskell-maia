@@ -14,12 +14,11 @@
 module Maia.Response where
 
 import Data.Map (Map)
-import Data.Vinyl
 import Maia.Internal.Lens
 import Maia.Language
 import Maia.Language.Config
 import Maia.Language.Cardinality
-import Maia.Language.Named
+import Maia.Record
 
 type family RespOf f where
   RespOf (Field (Config card args e) (Atomic a)) =
@@ -33,13 +32,10 @@ type family ArgsFor args a where
   ArgsFor (Arg arg) a = Map arg a
 
 newtype Resp f =
-  Resp (RespOf (NamedValue f))
-
-deriving instance Show (RespOf f) => Show (Resp (n :- f))
+  Resp (RespOf f)
 
 newtype Response t =
   Response (Rec Resp (Fields t))
-  deriving (Show)
 
 lResponse' :: Lens' (Response t) (Rec Resp (Fields t))
 lResponse' inj (Response rc) = Response <$> inj rc

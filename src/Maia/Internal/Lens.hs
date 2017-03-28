@@ -13,7 +13,7 @@ module Maia.Internal.Lens where
 
 import Data.Functor.Const
 import Data.Functor.Identity
-import Data.Vinyl
+import Maia.Record
 
 type Lens s t a b = forall f . Functor f => (a -> f b) -> (s -> f t)
 type Lens' s a = Lens s s a a
@@ -29,7 +29,7 @@ lover l f = runIdentity . l (Identity . f)
 lset :: Lens s t a b -> b -> s -> t
 lset l = lover l . const
 
-rlHead :: Lens (Rec f (r ': rs)) (Rec f (s ': rs)) (f r) (f s)
+rlHead :: Lens (Rec f (n :- r ': rs)) (Rec f (n :- s ': rs)) (f r) (f s)
 rlHead inj (hd :& tl) = (\hd' -> hd' :& tl) <$> inj hd
 
 rlTail :: Lens (Rec f (r ': rs)) (Rec f (r ': ss)) (Rec f rs) (Rec f ss)

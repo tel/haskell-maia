@@ -13,19 +13,18 @@
 
 module Maia.Handler where
 
-import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Data.Singletons.Prelude hiding ((:-))
-import Data.Vinyl hiding (SField)
 import Maia.Language
 import Maia.Language.Cardinality
 import Maia.Language.Config
-import Maia.Language.Named
+import Maia.Record
 import Maia.Request
 import Maia.Response
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 newtype Handling f s =
-  Handling (HandlerFor f (NamedValue s))
+  Handling (HandlerFor f s)
 
 type family HandlerFor f s where
   HandlerFor f (Field (Config card arg err) (Atomic a)) =
@@ -39,7 +38,6 @@ type family ArgFor args a where
 
 newtype Handler f t =
   Handler { handlerRecord :: Rec (Handling f) (Fields t) }
-  deriving (Show)
 
 runHandler ::
   (SingI (Fields t), Monad f) => Handler f t -> Request t -> f (Response t)

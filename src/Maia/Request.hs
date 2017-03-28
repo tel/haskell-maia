@@ -20,11 +20,10 @@ import Data.Map (Map)
 import Data.Set (Set)
 import Data.Singletons
 import Data.Singletons.Prelude hiding ((:-), Map, All)
-import Data.Vinyl hiding (SField)
 import Maia.Internal.Lens
 import Maia.Language
 import Maia.Language.Config
-import Maia.Language.Named
+import Maia.Record
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 
@@ -35,13 +34,10 @@ type family ReqOf f where
   ReqOf (Field (Config card (Arg arg) err) (Nested t)) = Map arg (Request t)
 
 newtype Req f =
-  Req (ReqOf (NamedValue f))
-
-deriving instance Show (ReqOf f) => Show (Req (n :- f))
+  Req (ReqOf f)
 
 newtype Request t =
   Request { requestRecord :: Rec Req (Fields t) }
-  deriving (Show)
 
 instance SingI (Fields t) => Monoid (Request t) where
 
@@ -70,7 +66,7 @@ combReq sft (Request rec1) (Request rec2) =
         (rh1 :& rt1, rh2 :& rt2) ->
           combValue s rh1 rh2 :& go rs' rt1 rt2
 
-defValue :: Sing s -> Req (n :- s)
+defValue :: Sing s -> Req s
 defValue (SField (SConfig _ arg _) v) =
   case (v, arg) of
     (SAtomic _, SNoArg) -> Req False
@@ -78,7 +74,7 @@ defValue (SField (SConfig _ arg _) v) =
     (SNested _, SNoArg) -> Req Nothing
     (SNested _, SArg _) -> Req Map.empty
 
-combValue :: Sing s -> Req (n :- s) -> Req (n :- s) -> Req (n :- s)
+combValue :: Sing s -> Req s -> Req s -> Req s
 combValue s (Req reqa) (Req reqb) = Req (go s reqa reqb) where
   go :: forall s . Sing s -> ReqOf s -> ReqOf s -> ReqOf s
   go (SField (SConfig _ args _) v) a b =

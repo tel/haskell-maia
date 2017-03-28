@@ -15,14 +15,13 @@ module Example.Api where
 
 import Data.Functor.Identity
 import Data.Proxy
-import Data.Vinyl
 import Maia.Handler
 import Maia.Language
 import Maia.Language.Cardinality
 import Maia.Language.Config
-import Maia.Language.Named ((:-))
 import Maia.Lookup
 import Maia.Lookup.Builder
+import Maia.Record
 
 --------------------------------------------------------------------------------
 

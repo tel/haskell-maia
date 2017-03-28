@@ -4,7 +4,6 @@
 
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,15 +16,14 @@ module Maia.Lookup.Builder where
 
 import Data.Singletons
 import Data.Singletons.Prelude hiding (Lookup, (:-))
-import Data.Vinyl hiding (SField)
 import Data.Void
 import GHC.TypeLits
 import Maia.Internal.Lens
 import Maia.Language
 import Maia.Language.Cardinality
 import Maia.Language.Config
-import Maia.Language.Named
 import Maia.Lookup
+import Maia.Record
 import Maia.Request
 import Maia.Response as Response hiding (ArgsFor)
 import qualified Data.Map as Map
@@ -46,7 +44,7 @@ newtype Zoom e card t t' =
 -- upon @t@ and @s@. It's easiest to let Haskell infer these types.
 newtype Query t s = Query { runQuery :: QueryOf t s }
 
-type family QueryOf t s = l where
+type family QueryOf t s where
   QueryOf t (Field (Config card args err) (Atomic a)) =
     ArgsFor args (Lookup t (BestErrorType err) (CollectionOf card a))
   QueryOf t (Field (Config card args err) (Nested t')) =
@@ -64,7 +62,7 @@ type family Lookups t rs = r where
   Lookups t '[] = End
   Lookups t ( (n :- s) ': rs) = Query t s :*: Lookups t rs
 
-type FieldLens t n s = forall f . Lens' (Rec f (Fields t)) (f (n :- s))
+type FieldLens t n s = forall f . Lens' (Rec f (Fields t)) (f s)
 
 -- | Generate a heterogenous list of "query-builder"s for a given type with
 -- a specified Fields-set. See examples for syntax.
@@ -113,7 +111,7 @@ lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
     -- response accordingly) handle various error conditions.
 
     buildLookup ::
-      Req (n :- s)
+      Req s
       -> (RespOf s -> Maybe (ErrorValue err a))
       -> (a -> Result (BestErrorType err) r)
       -> Lookup t (BestErrorType err) r
