@@ -35,6 +35,11 @@ type family CollectionOf (c :: Cardinality) a where
   CollectionOf Opt a = Maybe a
   CollectionOf Many a = [a]
 
+mapColl :: Sing c -> (a -> b) -> (CollectionOf c a -> CollectionOf c b)
+mapColl SOne f a = f a
+mapColl SOpt f a = fmap f a
+mapColl SMany f a = fmap f a
+
 traverseColl ::
   Applicative f => Sing c -> (a -> f b) ->
   CollectionOf c a -> f (CollectionOf c b)

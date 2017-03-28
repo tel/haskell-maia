@@ -21,6 +21,7 @@ import Maia.Language
 import Maia.Language.Cardinality
 import Maia.Language.Config
 import Maia.Language.Named ((:-))
+import Maia.Lookup
 import Maia.Lookup.Builder
 
 --------------------------------------------------------------------------------
@@ -99,7 +100,7 @@ instance HasApi Api where
     , "getCurrentUser" :- Field (Config Opt NoArg NoErr) (Nested Person)
     ]
 
-Query getUser :*: Query (Zoom getCurrentUser) :*: End =
+Query getCity :*: Query (Zoom getCurrentUser) :*: End =
   lookups (Proxy :: Proxy Api)
 
 apiHandler :: Handler Identity Api
@@ -107,3 +108,14 @@ apiHandler = Handler $
      Handling (Identity . cityHandler)
   :& Handling (Identity Nothing) -- not a live system
   :& RNil
+
+--------------------------------------------------------------------------------
+
+lk1 :: Lookup' Api (Maybe String)
+lk1 = runZoom (getCity "Atlanta") name
+
+lk2 :: Lookup' City String
+lk2 = name
+
+handleLookup :: (HasApi t, Monad f) => Handler f t -> Lookup t e r -> f (Result e r)
+handleLookup h lk = responseHandler lk <$> runHandler h (request lk)

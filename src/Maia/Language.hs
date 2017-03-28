@@ -30,8 +30,11 @@ import Maia.Language.Named
 -- | Any type may participate in the Api description by instantiating @HasApi@
 -- and providing a list of @Fields@.
 
-class HasApi t where
+class SingI (Fields t) => HasApi t where
   type Fields t :: [Named FieldSpec]
+
+fieldsSing :: HasApi t => Proxy t -> Sing (Fields t)
+fieldsSing _ = sing
 
 --------------------------------------------------------------------------------
 
@@ -74,11 +77,11 @@ type Atomic' a = Field DefaultConfig (Atomic a)
 type Nested' t = Field DefaultConfig (Nested t)
 
 data instance Sing (s :: Target) where
-  SAtomic :: s ~ Atomic t => Sing (Atomic t)
-  SNested :: (s ~ Nested t, HasApi t) => Sing (Fields t) -> Sing (Nested t)
+  SAtomic :: s ~ Atomic t => Proxy t -> Sing (Atomic t)
+  SNested :: (s ~ Nested t, HasApi t) => Proxy t -> Sing (Nested t)
 
 instance SingI (Atomic t) where
-  sing = SAtomic
+  sing = SAtomic Proxy
 
 instance (HasApi t, SingI (Fields t)) => SingI (Nested t) where
-  sing = SNested sing
+  sing = SNested Proxy

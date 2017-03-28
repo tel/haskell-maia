@@ -73,27 +73,27 @@ combReq sft (Request rec1) (Request rec2) =
 defValue :: Sing s -> Req (n :- s)
 defValue (SField (SConfig _ arg _) v) =
   case (v, arg) of
-    (SAtomic, SNoArg) -> Req False
-    (SAtomic, SArg) -> Req Set.empty
+    (SAtomic _, SNoArg) -> Req False
+    (SAtomic _, SArg _) -> Req Set.empty
     (SNested _, SNoArg) -> Req Nothing
-    (SNested _, SArg) -> Req Map.empty
+    (SNested _, SArg _) -> Req Map.empty
 
 combValue :: Sing s -> Req (n :- s) -> Req (n :- s) -> Req (n :- s)
 combValue s (Req reqa) (Req reqb) = Req (go s reqa reqb) where
   go :: forall s . Sing s -> ReqOf s -> ReqOf s -> ReqOf s
   go (SField (SConfig _ args _) v) a b =
     case (v, args) of
-      (SAtomic, SNoArg) ->
+      (SAtomic _, SNoArg) ->
         a || b
-      (SAtomic, SArg) ->
+      (SAtomic _, SArg _) ->
         Set.union a b
-      (SNested fields, SNoArg) -> case (a, b) of
-        (Just aa, Just bb) -> Just (combReq fields aa bb)
+      (SNested pt, SNoArg) -> case (a, b) of
+        (Just aa, Just bb) -> Just (combReq (fieldsSing pt) aa bb)
         (Just aa, _) -> Just aa
         (_, Just bb) -> Just bb
         (_, _) -> Nothing
-      (SNested fields, SArg) ->
-        Map.unionWith (combReq fields) a b
+      (SNested pt, SArg _) ->
+        Map.unionWith (combReq (fieldsSing pt)) a b
 
 lRequest' :: Lens' (Request t) (Rec Req (Fields t))
 lRequest' inj (Request rc) = Request <$> inj rc

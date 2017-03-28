@@ -48,17 +48,17 @@ newtype Query t s = Query { runQuery :: QueryOf t s }
 
 type family QueryOf t s = l where
   QueryOf t (Field (Config card args err) (Atomic a)) =
-    ArgsFor args (Lookup t (ErrorFor err) (CollectionOf card a))
+    ArgsFor args (Lookup t (BestErrorType err) (CollectionOf card a))
   QueryOf t (Field (Config card args err) (Nested t')) =
-    ArgsFor args (Zoom (ErrorFor err) card t t')
+    ArgsFor args (Zoom (BestErrorType err) card t t')
 
 type family ArgsFor args r where
   ArgsFor NoArg r = r
   ArgsFor (Arg arg) r = arg -> r
 
-type family ErrorFor e where
-  ErrorFor NoErr = Void
-  ErrorFor (Err e) = e
+type family BestErrorType e where
+  BestErrorType NoErr = Void
+  BestErrorType (Err e) = e
 
 type family Lookups t rs = r where
   Lookups t '[] = End
@@ -82,10 +82,10 @@ lookupOne :: forall t n s . String -> Request t -> FieldLens t n s -> Sing s -> 
 lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
   case (ft, arg) of
 
-    (SAtomic, SNoArg) ->
+    (SAtomic _, SNoArg) ->
       Query (buildLookup (Req True) id (Result . Right))
 
-    (SAtomic, SArg) ->
+    (SAtomic _, SArg _) ->
       Query $ \i ->
         buildLookup (Req (Set.singleton i)) (Map.lookup i) (Result . Right)
 
@@ -96,7 +96,7 @@ lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
           id
           (traverseColl card (responseHandler subLk))
 
-    (SNested _, SArg) ->
+    (SNested _, SArg _) ->
       Query $ \i ->
         Zoom $ \subLk ->
           buildLookup 
@@ -114,9 +114,9 @@ lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
 
     buildLookup ::
       Req (n :- s)
-      -> (RespOf s -> Maybe (ErrorsFor err a))
-      -> (a -> Result (ErrorFor err) r)
-      -> Lookup t (ErrorFor err) r
+      -> (RespOf s -> Maybe (ErrorValue err a))
+      -> (a -> Result (BestErrorType err) r)
+      -> Lookup t (BestErrorType err) r
     buildLookup reqHole respPre resultHandler = Lookup req resph where
       req =
         lset (lRequest' . lens) reqHole req0
@@ -129,7 +129,7 @@ lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
               Just res -> case e of
                 SNoErr ->
                   resultHandler res
-                SErr -> case res of
+                SErr _ -> case res of
                   Left le ->
                     Result (Left (Le.LocalError le))
                   Right a ->

@@ -23,18 +23,14 @@ import Maia.Language.Named
 
 type family RespOf f where
   RespOf (Field (Config card args e) (Atomic a)) =
-    ArgsFor args (ErrorsFor e (CollectionOf card a))
+    ArgsFor args (ErrorValue e (CollectionOf card a))
 
   RespOf (Field (Config card args e) (Nested t)) =
-    ArgsFor args (ErrorsFor e (CollectionOf card (Response t)))
+    ArgsFor args (ErrorValue e (CollectionOf card (Response t)))
 
 type family ArgsFor args a where
   ArgsFor NoArg a = Maybe a
   ArgsFor (Arg arg) a = Map arg a
-
-type family ErrorsFor err a where
-  ErrorsFor NoErr a = a
-  ErrorsFor (Err e) a = Either e a
 
 newtype Resp f =
   Resp (RespOf (NamedValue f))

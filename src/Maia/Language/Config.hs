@@ -11,9 +11,10 @@
 
 module Maia.Language.Config where
 
+import Data.Kind
+import Data.Proxy
 import Data.Singletons
 import Maia.Language.Cardinality
-import Data.Kind
 
 data ArgConfig where
   NoArg :: ArgConfig
@@ -21,10 +22,10 @@ data ArgConfig where
 
 data instance Sing (c :: ArgConfig) where
   SNoArg :: Sing NoArg
-  SArg :: Ord a => Sing (Arg a)
+  SArg :: Ord a => Proxy a -> Sing (Arg a)
 
 instance SingI NoArg where sing = SNoArg
-instance Ord a => SingI (Arg a) where sing = SArg
+instance Ord a => SingI (Arg a) where sing = SArg Proxy
 
 type NoArg = 'NoArg
 type Arg = 'Arg
@@ -37,14 +38,17 @@ data ErrConfig where
 
 data instance Sing (e :: ErrConfig) where
   SNoErr :: Sing NoErr
-  SErr :: Sing (Err e)
+  SErr :: Proxy e -> Sing (Err e)
 
 instance SingI NoErr where sing = SNoErr
-instance SingI (Err e) where sing = SErr
+instance SingI (Err e) where sing = SErr Proxy
 
 type NoErr = 'NoErr
 type Err = 'Err
 
+type family ErrorValue err a where
+  ErrorValue NoErr a = a
+  ErrorValue (Err e) a = Either e a
 
 
 data FieldConfig where

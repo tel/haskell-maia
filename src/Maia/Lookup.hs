@@ -10,6 +10,7 @@ module Maia.Lookup where
 
 import Data.Monoid
 import Data.Singletons
+import Data.Void
 import Maia.Language
 import Maia.Lookup.Error
 import Maia.Request
@@ -19,6 +20,9 @@ data Lookup t e r =
   Lookup { request :: Request t
          , responseHandler :: Response t -> Result e r
          }
+
+-- | The common case of a non-erroring @Lookup@.
+type Lookup' t r = Lookup t Void r
 
 instance Functor (Lookup t e) where
   fmap f (Lookup req resph ) =
