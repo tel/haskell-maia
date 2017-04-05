@@ -25,7 +25,8 @@ data instance Sing (c :: ArgConfig) where
   SArg :: Ord a => Proxy a -> Sing (Arg a)
 
 instance SingI NoArg where sing = SNoArg
-instance Ord a => SingI (Arg a) where sing = SArg Proxy
+instance Ord a => SingI (Arg a) where
+  sing = SArg Proxy
 
 type NoArg = 'NoArg
 type Arg = 'Arg

@@ -19,6 +19,7 @@ import Data.Singletons.Prelude hiding (Lookup, (:-))
 import Data.Void
 import GHC.TypeLits
 import Maia.Internal.Lens
+import Maia.Internal.Provided
 import Maia.Language
 import Maia.Language.Cardinality
 import Maia.Language.Config
@@ -34,11 +35,6 @@ data End = End
 data a :*: b = a :*: b
 infixr 2 :*:
 
--- | A value of @Zoom _ _ t t'@ transforms a @Lookup@ on the type @t'@ to
--- one on @t@. Use @runZoom@ to access this "@Lookup@-transformer".
-newtype Zoom e card t t' =
-  Zoom { runZoom :: forall r . Lookup t' e r -> Lookup t e (CollectionOf card r) }
-
 -- | A value of type @Query t s@ knows how to build @Lookup@s from the fields of
 -- @t@ to a particular field @s@. The type of the value inside of a @Query@ depends
 -- upon @t@ and @s@. It's easiest to let Haskell infer these types.
@@ -48,7 +44,7 @@ type family QueryOf t s where
   QueryOf t (Field (Config card args err) (Atomic a)) =
     ArgsFor args (Lookup t (BestErrorType err) (CollectionOf card a))
   QueryOf t (Field (Config card args err) (Nested t')) =
-    ArgsFor args (Zoom (BestErrorType err) card t t')
+    ArgsFor args (SubLookup (BestErrorType err) card t t')
 
 type family ArgsFor args r where
   ArgsFor NoArg r = r
@@ -81,26 +77,26 @@ lookupOne name req0 lens (SField (SConfig card arg (e :: Sing err)) ft) =
   case (ft, arg) of
 
     (SAtomic _, SNoArg) ->
-      Query (buildLookup (Req True) id (Result . Right))
+      Query (buildLookup (Req True) runProvided (Result . Right))
 
     (SAtomic _, SArg _) ->
       Query $ \i ->
         buildLookup (Req (Set.singleton i)) (Map.lookup i) (Result . Right)
 
     (SNested _, SNoArg) ->
-      Query $ Zoom $ \subLk ->
+      Query $ SubLookup $ \subLk ->
         buildLookup
-          (Req (Just (request subLk)))
-          id
+          (Req (Provided (request subLk)))
+          runProvided
           (traverseColl card (responseHandler subLk))
 
     (SNested _, SArg _) ->
       Query $ \i ->
-        Zoom $ \subLk ->
-          buildLookup 
+        SubLookup $ \subLk ->
+          buildLookup
             (Req (Map.singleton i (request subLk)))
             (Map.lookup i)
-            (traverseColl card (responseHandler subLk)) 
+            (traverseColl card (responseHandler subLk))
 
   where
 

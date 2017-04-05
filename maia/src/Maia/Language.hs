@@ -2,15 +2,15 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE ExplicitNamespaces   #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE KindSignatures       #-}
+{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | The core module defining elements of the Maia type-level API description
@@ -20,10 +20,14 @@
 
 module Maia.Language where
 
-import Data.Kind
-import Data.Singletons
-import Maia.Language.Config
-import Maia.Record
+-- NOTE: We must import instances from Data.Singletons.Prelude in order to
+-- define HasApi instances--it's needed for SingI for lists.
+
+import           Data.Kind
+import           Data.Singletons
+import           Data.Singletons.Prelude ()
+import           Maia.Language.Config
+import           Maia.Record
 
 --------------------------------------------------------------------------------
 
@@ -77,7 +81,7 @@ type Atomic' a = Field DefaultConfig (Atomic a)
 type Nested' t = Field DefaultConfig (Nested t)
 
 data instance Sing (s :: Target) where
-  SAtomic :: s ~ Atomic t => Proxy t -> Sing (Atomic t)
+  SAtomic :: (s ~ Atomic a) => Proxy a -> Sing (Atomic a)
   SNested :: (s ~ Nested t, HasApi t) => Proxy t -> Sing (Nested t)
 
 instance SingI (Atomic t) where

@@ -17,7 +17,9 @@ before_install:
 - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
 
 install:
-- stack --no-terminal --install-ghc test --only-dependencies
+- stack --no-terminal --skip-ghc-check setup
+- stack --no-terminal --skip-ghc-check build --test --haddock --only-snapshot --fast --pedantic
 
 script:
-- stack --no-terminal test --haddock --no-haddock-deps
+  - stack --no-terminal --skip-ghc-check test --fast --pedantic
+  - stack --no-terminal --skip-ghc-check haddock --fast --pedantic

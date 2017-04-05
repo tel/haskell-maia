@@ -10,8 +10,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Maia.Record where
 
@@ -33,15 +31,11 @@ data instance Sing (s :: Named v) where
 instance (KnownSymbol n, SingI n, SingI v) => SingI (n :- v) where
   sing = SNamed sing sing
 
--- | Extracts the type of kind @k@ from a type of kind @Named k@.
-type family NamedValue (n :: Named v) :: v where
-  NamedValue (n :- v) = v
-
 --------------------------------------------------------------------------------
 
 data Rec (f :: k -> *) (rs :: [Named k]) where
   RNil :: Rec f '[]
-  (:&) :: f s -> Rec f rs -> Rec f (n :- s : rs)
+  (:&) :: f s -> Rec f rs -> Rec f (n :- s ': rs)
 
 infixr 7 :&
 

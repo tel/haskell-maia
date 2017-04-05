@@ -1,0 +1,54 @@
+name:                maia-aeson
+version:             0.1.0.0
+synopsis:            Tools for serializing Maia requests and responses to JSON
+description:         Tools for serializing Maia requests and responses to JSON
+homepage:            https://github.com/MaiaOrg/haskell-maia#README
+license:             MPL-2.0
+license-file:        ../LICENSE
+author:              Joseph Abrahamson
+maintainer:          me@jspha.com
+copyright:           2017 Joseph Abrahamson
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:
+    Maia.Aeson
+    Maia.Aeson.Default
+  build-depends:       base >= 4.7 && < 5
+                     , maia
+                     , maia-serialization
+                     , aeson
+                     , containers
+                     , singletons
+                     , text
+  default-language:    Haskell2010
+
+test-suite maia-aeson-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Main.hs
+  other-modules:
+    Lib
+    Spec
+    Spec.Serializations
+    Spec.Serializations.NullCollapse
+  build-depends:       base
+                     , maia
+                     , maia-aeson
+                     , maia-example-api
+                     , maia-serialization
+                     , aeson
+                     , aeson-diff
+                     , bytestring
+                     , HUnit
+                     , tasty
+                     , tasty-hunit
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/MaiaOrg/haskell-maia

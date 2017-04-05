@@ -1,0 +1,35 @@
+name:                maia-serialization
+version:             0.1.0.0
+synopsis:            General tools for serializing Maia requests and responses
+description:         General tools for serializing Maia requests and responses
+homepage:            https://github.com/MaiaOrg/haskell-maia#README
+license:             MPL-2.0
+license-file:        ../LICENSE
+author:              Joseph Abrahamson
+maintainer:          me@jspha.com
+copyright:           2017 Joseph Abrahamson
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:
+    Maia.Serialization
+  build-depends:       base >= 4.7 && < 5
+                     , maia
+  default-language:    Haskell2010
+
+test-suite maia-serialization-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , maia
+                     , maia-serialization
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/MaiaOrg/haskell-maia

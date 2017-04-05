@@ -2,26 +2,27 @@
 -- License, v. 2.0. If a copy of the MPL was not distributed with this
 -- file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ApplicativeDo        #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Maia.Handler where
 
-import Data.Singletons.Prelude hiding ((:-))
-import Maia.Language
-import Maia.Language.Cardinality
-import Maia.Language.Config
-import Maia.Record
-import Maia.Request
-import Maia.Response
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import qualified Data.Map                  as Map
+import qualified Data.Set                  as Set
+import           Data.Singletons.Prelude   hiding ((:-))
+import           Maia.Internal.Provided
+import           Maia.Language
+import           Maia.Language.Cardinality
+import           Maia.Language.Config
+import           Maia.Record
+import           Maia.Request
+import           Maia.Response
 
 newtype Handling f s =
   Handling (HandlerFor f s)
@@ -59,7 +60,7 @@ runHandler' (SCons (SNamed _ (SField c t)) rest) (Handling h :& hs) (Req req :& 
 -- TODO: Refactor handleOne to something less utterly repetitive.
 
 handleOne ::
-  forall f c t . 
+  forall f c t .
   Monad f
   => Sing c
   -> Sing t
@@ -68,16 +69,16 @@ handleOne ::
   -> f (RespOf (Field c t))
 handleOne (SConfig _ SNoArg _) (SAtomic _) getAtom wantsResponse =
   if wantsResponse
-  then Just <$> getAtom
-  else pure Nothing
+  then Provided <$> getAtom
+  else pure Absent
 handleOne (SConfig _ (SArg _) _) (SAtomic _) buildResp argSet =
   Set.foldl' comb (pure Map.empty) argSet where
     comb fmp arg = Map.insert arg <$> buildResp arg <*> fmp
 handleOne (SConfig card SNoArg SNoErr) (SNested (pt :: Proxy t')) buildSubHandlers maySubRequest =
   case maySubRequest of
-    Nothing ->
-      pure Nothing
-    Just (Request subr) -> do
+    Absent ->
+      pure Absent
+    Provided (Request subr) -> do
       subhs <- buildSubHandlers
       let
         -- NOTE: This requires an explicit annotation to plumb type information
@@ -87,23 +88,23 @@ handleOne (SConfig card SNoArg SNoErr) (SNested (pt :: Proxy t')) buildSubHandle
         go (Handler subh) =
           Response <$> runHandler' (fieldsSing pt) subh subr
       res <- traverseColl card go subhs
-      pure (Just res)
+      pure (Provided res)
 handleOne (SConfig card SNoArg (SErr _)) (SNested (pt :: Proxy t')) buildSubHandlers maySubRequest =
   case maySubRequest of
-    Nothing ->
-      pure Nothing
-    Just (Request subr) -> do
+    Absent ->
+      pure Absent
+    Provided (Request subr) -> do
       eit_subhs <- buildSubHandlers
       case eit_subhs of
         Left err ->
-          pure (Just (Left err))
+          pure (Provided (Left err))
         Right subhs -> do
           let
             go :: Handler f t' -> f (Response t')
             go (Handler subh) =
               Response <$> runHandler' (fieldsSing pt) subh subr
           res <- traverseColl card go subhs
-          pure (Just (Right res))
+          pure (Provided (Right res))
 handleOne
   (SConfig (card :: Sing card) (SArg (_ :: Proxy arg)) SNoErr)
   (SNested (pt :: Proxy t'))
