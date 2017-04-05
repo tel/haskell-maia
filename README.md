@@ -26,7 +26,7 @@ having a discussion through a series of questions and answers.
   - If you cause a new "real, recognized problem" then someone can
     submit a new patch to fix it.
 - "Real, recognized problems" are tracked in Github Issues on the
-  [Problem Flow board](../../projects/2).
+  [Problem Flow board](../../projects/1).
 
 ### Deeper dive
 
