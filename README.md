@@ -4,6 +4,8 @@
 *Highly-typeful data fetching in Haskell, a la GraphQL*
 
 [![Build Status](https://travis-ci.org/MaiaOrg/haskell-maia.svg?branch=master)](https://travis-ci.org/MaiaOrg/haskell-maia)
+[![Stories in
+Ready](https://badge.waffle.io/MaiaOrg/maia-core.svg?label=ready&title=Ready)](http://waffle.io/MaiaOrg/maia-core)
 
 ## Welcome
 
@@ -25,8 +27,8 @@ having a discussion through a series of questions and answers.
   merged: no questions asked.
   - If you cause a new "real, recognized problem" then someone can
     submit a new patch to fix it.
-- "Real, recognized problems" are tracked in Github Issues on the
-  [Problem Flow board](../../projects/1).
+- "Real, recognized problems" are tracked in Github Issues and on the
+  [Waffle.io board](http://waffle.io/MaiaOrg/maia-core).
 
 ### Deeper dive
 
